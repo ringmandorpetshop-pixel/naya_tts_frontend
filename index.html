@@ -8,7 +8,13 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Naya Studio TTS</title>
+  <title>AnaStudio - Text to Speech</title>
+
+  <link
+    rel="icon"
+    type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237b1e3a'/%3E%3Cpath d='M25 72 L50 18 L75 72 H61 L55 58 H45 L39 72 Z M48 46 L50 40 L52 46 Z' fill='white'/%3E%3C/svg%3E"
+  />
 
   <!-- Library gratis untuk mengubah PCM menjadi MP3 -->
   <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
@@ -141,7 +147,7 @@
 <body>
   <div class="container">
     <div class="card">
-      <h1>Naya Studio TTS</h1>
+      <h1>AnaStudio</h1>
 
       <p class="subtitle">
         Ubah narasi menjadi suara MP3
@@ -187,7 +193,7 @@
         id="textInput"
         maxlength="5000"
         placeholder="Tulis narasi yang ingin diubah menjadi suara..."
-      >Halo, saya Naya. Selamat datang di Naya Studio.</textarea>
+      >Halo, saya Naya. Selamat datang di AnaStudio.</textarea>
 
       <div class="character-count">
         <span id="characterCount">0</span> / 5000 karakter
@@ -201,7 +207,7 @@
         <a
           id="downloadButton"
           class="download-button"
-          download="naya-voice.mp3"
+          download="AnaAudio_001.mp3"
         >
           Download MP3
         </a>
@@ -486,9 +492,7 @@
           .slice(0, 19)
           .replace(/:/g, "-");
 
-      return "naya-voice-" +
-        date +
-        ".mp3";
+      return "AnaAudio_001.mp3";
     }
   </script>
 </body>
