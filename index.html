@@ -2,9 +2,16 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>Naya Studio TTS</title>
+
+  <!-- Library gratis untuk mengubah PCM menjadi MP3 -->
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 
   <style>
     * {
@@ -13,6 +20,7 @@
 
     body {
       margin: 0;
+      min-height: 100vh;
       font-family: Arial, sans-serif;
       background: #f4f6f9;
       color: #222;
@@ -20,22 +28,30 @@
 
     .container {
       width: 100%;
-      max-width: 700px;
-      margin: 40px auto;
-      padding: 20px;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 24px 16px;
     }
 
     .card {
       background: white;
-      padding: 25px;
+      padding: 24px;
       border-radius: 16px;
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
     }
 
     h1 {
       margin-top: 0;
+      margin-bottom: 8px;
       text-align: center;
       color: #7b1e3a;
+    }
+
+    .subtitle {
+      margin-top: 0;
+      margin-bottom: 24px;
+      text-align: center;
+      color: #666;
     }
 
     label {
@@ -46,23 +62,37 @@
     }
 
     textarea,
+    input,
     select {
       width: 100%;
       padding: 12px;
       border: 1px solid #ccc;
       border-radius: 8px;
+      font-family: inherit;
       font-size: 16px;
     }
 
     textarea {
-      min-height: 160px;
+      min-height: 170px;
       resize: vertical;
+    }
+
+    .character-count {
+      margin-top: 6px;
+      text-align: right;
+      font-size: 13px;
+      color: #777;
+    }
+
+    .button-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
     }
 
     button,
     .download-button {
-      display: inline-block;
-      margin-top: 20px;
       padding: 12px 18px;
       border: none;
       border-radius: 8px;
@@ -79,21 +109,31 @@
     }
 
     .download-button {
-      background: #176b45;
       display: none;
-      margin-left: 8px;
+      background: #176b45;
     }
 
     #status {
-      margin-top: 15px;
+      margin-top: 18px;
       color: #555;
       white-space: pre-wrap;
+      line-height: 1.5;
     }
 
     audio {
+      display: none;
       width: 100%;
       margin-top: 20px;
-      display: none;
+    }
+
+    .info {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f8f1f4;
+      color: #6b2940;
+      font-size: 14px;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -103,14 +143,23 @@
     <div class="card">
       <h1>Naya Studio TTS</h1>
 
-      <label for="textInput">Teks Narasi</label>
+      <p class="subtitle">
+        Ubah narasi menjadi suara MP3
+      </p>
 
-      <textarea
-        id="textInput"
-        placeholder="Tulis narasi yang ingin diubah menjadi suara..."
-      >Halo, saya Naya. Selamat datang di Naya Studio.</textarea>
+      <label for="modelSelect">
+        Model AI
+      </label>
 
-      <label for="voiceSelect">Pilih Suara</label>
+      <select id="modelSelect">
+        <option value="gemini-2.5-flash-preview-tts">
+          Gemini 2.5 Flash Preview TTS
+        </option>
+      </select>
+
+      <label for="voiceSelect">
+        Suara Gemini
+      </label>
 
       <select id="voiceSelect">
         <option value="Kore">Kore</option>
@@ -120,21 +169,55 @@
         <option value="Aoede">Aoede</option>
       </select>
 
-      <button id="generateButton">
-        Generate Voice
-      </button>
+      <label for="styleInput">
+        Preset Karakter Suara
+      </label>
 
-      <a
-        id="downloadButton"
-        class="download-button"
-        download="naya-voice.wav"
+      <input
+        type="text"
+        id="styleInput"
+        placeholder="Kosongkan untuk memakai suara pria dewasa yang ramah dan natural..."
       >
-        Download Audio
-      </a>
+
+      <label for="textInput">
+        Teks Narasi
+      </label>
+
+      <textarea
+        id="textInput"
+        maxlength="5000"
+        placeholder="Tulis narasi yang ingin diubah menjadi suara..."
+      >Halo, saya Naya. Selamat datang di Naya Studio.</textarea>
+
+      <div class="character-count">
+        <span id="characterCount">0</span> / 5000 karakter
+      </div>
+
+      <div class="button-area">
+        <button id="generateButton">
+          Generate MP3
+        </button>
+
+        <a
+          id="downloadButton"
+          class="download-button"
+          download="naya-voice.mp3"
+        >
+          Download MP3
+        </a>
+      </div>
 
       <div id="status"></div>
 
-      <audio id="audioPlayer" controls></audio>
+      <audio
+        id="audioPlayer"
+        controls
+      ></audio>
+
+      <div class="info">
+        Audio Gemini dikonversi menjadi MP3 langsung di browser.
+        API key tetap berada di backend Vercel.
+      </div>
     </div>
   </div>
 
@@ -142,144 +225,270 @@
     const BACKEND_URL =
       "https://naya-tts-backend.vercel.app/api/generate";
 
-    const textInput = document.getElementById("textInput");
-    const voiceSelect = document.getElementById("voiceSelect");
-    const generateButton = document.getElementById("generateButton");
-    const downloadButton = document.getElementById("downloadButton");
-    const statusText = document.getElementById("status");
-    const audioPlayer = document.getElementById("audioPlayer");
+    const textInput =
+      document.getElementById("textInput");
 
-    generateButton.addEventListener("click", generateVoice);
+    const styleInput =
+      document.getElementById("styleInput");
+
+    const voiceSelect =
+      document.getElementById("voiceSelect");
+
+    const modelSelect =
+      document.getElementById("modelSelect");
+
+    const generateButton =
+      document.getElementById("generateButton");
+
+    const downloadButton =
+      document.getElementById("downloadButton");
+
+    const statusText =
+      document.getElementById("status");
+
+    const audioPlayer =
+      document.getElementById("audioPlayer");
+
+    const characterCount =
+      document.getElementById("characterCount");
+
+    const defaultStyle =
+      "Bacakan dengan suara pria dewasa yang ramah, natural, jelas, dan cocok untuk narasi status Facebook serta video affiliate.";
+
+    let currentAudioUrl = null;
+
+    textInput.addEventListener(
+      "input",
+      updateCharacterCount
+    );
+
+    generateButton.addEventListener(
+      "click",
+      generateVoice
+    );
+
+    updateCharacterCount();
+
+    function updateCharacterCount() {
+      characterCount.textContent =
+        textInput.value.length;
+    }
 
     async function generateVoice() {
-      const text = textInput.value.trim();
-      const voiceName = voiceSelect.value;
+      const text =
+        textInput.value.trim();
+
+      const voiceName =
+        voiceSelect.value;
+
+      const modelName =
+        modelSelect.value;
+
+      const customStyle =
+        styleInput.value.trim();
+
+      const voiceStyle =
+        customStyle || defaultStyle;
 
       if (!text) {
-        statusText.textContent = "Teks narasi belum diisi.";
+        statusText.textContent =
+          "Teks narasi belum diisi.";
+
         return;
       }
 
       generateButton.disabled = true;
-      generateButton.textContent = "Sedang membuat audio...";
-      statusText.textContent = "Menghubungi Gemini TTS...";
-      audioPlayer.style.display = "none";
-      downloadButton.style.display = "none";
+      generateButton.textContent =
+        "Sedang membuat MP3...";
+
+      statusText.textContent =
+        "Menghubungi Gemini TTS...";
+
+      audioPlayer.style.display =
+        "none";
+
+      downloadButton.style.display =
+        "none";
+
+      if (currentAudioUrl) {
+        URL.revokeObjectURL(
+          currentAudioUrl
+        );
+
+        currentAudioUrl = null;
+      }
 
       try {
-        const response = await fetch(BACKEND_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            text: text,
-            voiceName: voiceName
-          })
-        });
+        const response = await fetch(
+          BACKEND_URL,
+          {
+            method: "POST",
 
-        const result = await response.json();
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+              text:
+                voiceStyle +
+                "\n\nNarasi:\n" +
+                text,
+
+              voiceName: voiceName,
+
+              modelName: modelName
+            })
+          }
+        );
+
+        const result =
+          await response.json();
 
         if (!response.ok || !result.success) {
           throw new Error(
-            result.error || "Gagal membuat audio."
+            result.error ||
+            "Gagal membuat audio."
           );
         }
 
-        const wavBlob = base64ToWavBlob(
-          result.audioBase64,
-          24000,
-          1,
-          16
-        );
+        statusText.textContent =
+          "Mengubah audio menjadi MP3...";
 
-        const audioUrl = URL.createObjectURL(wavBlob);
+        const mp3Blob =
+          convertBase64PcmToMp3(
+            result.audioBase64,
+            24000,
+            1
+          );
 
-        audioPlayer.src = audioUrl;
-        audioPlayer.style.display = "block";
+        currentAudioUrl =
+          URL.createObjectURL(
+            mp3Blob
+          );
 
-        downloadButton.href = audioUrl;
-        downloadButton.style.display = "inline-block";
+        audioPlayer.src =
+          currentAudioUrl;
 
-        statusText.textContent = "Audio berhasil dibuat.";
+        audioPlayer.style.display =
+          "block";
+
+        downloadButton.href =
+          currentAudioUrl;
+
+        downloadButton.download =
+          createFileName();
+
+        downloadButton.style.display =
+          "inline-block";
+
+        statusText.textContent =
+          "MP3 berhasil dibuat dan siap diputar.";
 
       } catch (error) {
         statusText.textContent =
-          "Terjadi kesalahan: " + error.message;
+          "Terjadi kesalahan: " +
+          error.message;
+
       } finally {
-        generateButton.disabled = false;
-        generateButton.textContent = "Generate Voice";
+        generateButton.disabled =
+          false;
+
+        generateButton.textContent =
+          "Generate MP3";
       }
     }
 
-    function base64ToWavBlob(
+    function convertBase64PcmToMp3(
       base64,
       sampleRate,
-      numChannels,
-      bitsPerSample
+      channels
     ) {
-      const binaryString = atob(base64);
-      const pcmData = new Uint8Array(binaryString.length);
+      const binaryString =
+        atob(base64);
 
-      for (let i = 0; i < binaryString.length; i++) {
-        pcmData[i] = binaryString.charCodeAt(i);
+      const pcmBytes =
+        new Uint8Array(
+          binaryString.length
+        );
+
+      for (
+        let i = 0;
+        i < binaryString.length;
+        i++
+      ) {
+        pcmBytes[i] =
+          binaryString.charCodeAt(i);
       }
 
-      const wavBuffer = createWavBuffer(
-        pcmData,
-        sampleRate,
-        numChannels,
-        bitsPerSample
-      );
+      const pcm16 =
+        new Int16Array(
+          pcmBytes.buffer
+        );
 
-      return new Blob([wavBuffer], {
-        type: "audio/wav"
-      });
-    }
+      const mp3Encoder =
+        new lamejs.Mp3Encoder(
+          channels,
+          sampleRate,
+          128
+        );
 
-    function createWavBuffer(
-      pcmData,
-      sampleRate,
-      numChannels,
-      bitsPerSample
-    ) {
-      const bytesPerSample = bitsPerSample / 8;
-      const blockAlign = numChannels * bytesPerSample;
-      const byteRate = sampleRate * blockAlign;
+      const mp3Data = [];
 
-      const buffer = new ArrayBuffer(
-        44 + pcmData.length
-      );
+      const sampleBlockSize =
+        1152;
 
-      const view = new DataView(buffer);
+      for (
+        let i = 0;
+        i < pcm16.length;
+        i += sampleBlockSize
+      ) {
+        const sampleChunk =
+          pcm16.subarray(
+            i,
+            i + sampleBlockSize
+          );
 
-      writeText(view, 0, "RIFF");
-      view.setUint32(4, 36 + pcmData.length, true);
-      writeText(view, 8, "WAVE");
-      writeText(view, 12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, numChannels, true);
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, byteRate, true);
-      view.setUint16(32, blockAlign, true);
-      view.setUint16(34, bitsPerSample, true);
-      writeText(view, 36, "data");
-      view.setUint32(40, pcmData.length, true);
+        const mp3Buffer =
+          mp3Encoder.encodeBuffer(
+            sampleChunk
+          );
 
-      const output = new Uint8Array(buffer);
-      output.set(pcmData, 44);
+        if (mp3Buffer.length > 0) {
+          mp3Data.push(
+            new Int8Array(mp3Buffer)
+          );
+        }
+      }
 
-      return buffer;
-    }
+      const finalBuffer =
+        mp3Encoder.flush();
 
-    function writeText(view, offset, text) {
-      for (let i = 0; i < text.length; i++) {
-        view.setUint8(
-          offset + i,
-          text.charCodeAt(i)
+      if (finalBuffer.length > 0) {
+        mp3Data.push(
+          new Int8Array(finalBuffer)
         );
       }
+
+      return new Blob(
+        mp3Data,
+        {
+          type: "audio/mpeg"
+        }
+      );
+    }
+
+    function createFileName() {
+      const now =
+        new Date();
+
+      const date =
+        now.toISOString()
+          .slice(0, 19)
+          .replace(/:/g, "-");
+
+      return "naya-voice-" +
+        date +
+        ".mp3";
     }
   </script>
 </body>
