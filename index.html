@@ -199,6 +199,17 @@
         <span id="characterCount">0</span> / 5000 karakter
       </div>
 
+      <label for="fileNameInput">
+        Nama File Audio
+      </label>
+
+      <input
+        type="text"
+        id="fileNameInput"
+        placeholder="AnaAudio_01"
+        maxlength="80"
+      >
+
       <div class="button-area">
         <button id="generateButton">
           Generate MP3
@@ -221,8 +232,9 @@
       ></audio>
 
       <div class="info">
-        Audio Gemini dikonversi menjadi MP3 langsung di browser.
-        API key tetap berada di backend Vercel.
+        <strong>AnaStudio</strong><br>
+        Fitur unggulan: Text-to-Speech, pilihan karakter suara, preset narasi,
+        pemutar audio, dan ekspor MP3 langsung dari browser.
       </div>
     </div>
   </div>
@@ -257,6 +269,9 @@
 
     const characterCount =
       document.getElementById("characterCount");
+
+    const fileNameInput =
+      document.getElementById("fileNameInput");
 
     const defaultStyle =
       "Bacakan dengan suara pria dewasa yang ramah, natural, jelas, dan cocok untuk narasi status Facebook serta video affiliate.";
@@ -484,15 +499,26 @@
     }
 
     function createFileName() {
-      const now =
-        new Date();
+      let fileName =
+        fileNameInput.value.trim();
 
-      const date =
-        now.toISOString()
-          .slice(0, 19)
-          .replace(/:/g, "-");
+      if (!fileName) {
+        fileName = "AnaAudio_01";
+      }
 
-      return "AnaAudio_001.mp3";
+      fileName = fileName
+        .replace(/[\/:*?"<>|]/g, "")
+        .trim();
+
+      if (!fileName) {
+        fileName = "AnaAudio_01";
+      }
+
+      if (!fileName.toLowerCase().endsWith(".mp3")) {
+        fileName += ".mp3";
+      }
+
+      return fileName;
     }
   </script>
 </body>
