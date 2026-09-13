@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Naya Studio TTS</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      color: #222;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+      color: #7b1e3a;
+    }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+
+    button,
+    .download-button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #7b1e3a;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+
+    .download-button {
+      background: #176b45;
+      display: none;
+      margin-left: 8px;
+    }
+
+    #status {
+      margin-top: 15px;
+      color: #555;
+      white-space: pre-wrap;
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 20px;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Naya Studio TTS</h1>
+
+      <label for="textInput">Teks Narasi</label>
+
+      <textarea
+        id="textInput"
+        placeholder="Tulis narasi yang ingin diubah menjadi suara..."
+      >Halo, saya Naya. Selamat datang di Naya Studio.</textarea>
+
+      <label for="voiceSelect">Pilih Suara</label>
+
+      <select id="voiceSelect">
+        <option value="Kore">Kore</option>
+        <option value="Puck">Puck</option>
+        <option value="Charon">Charon</option>
+        <option value="Fenrir">Fenrir</option>
+        <option value="Aoede">Aoede</option>
+      </select>
+
+      <button id="generateButton">
+        Generate Voice
+      </button>
+
+      <a
+        id="downloadButton"
+        class="download-button"
+        download="naya-voice.wav"
+      >
+        Download Audio
+      </a>
+
+      <div id="status"></div>
+
+      <audio id="audioPlayer" controls></audio>
+    </div>
+  </div>
+
+  <script>
+    const BACKEND_URL =
+      "https://naya-tts-backend.vercel.app/api/generate";
+
+    const textInput = document.getElementById("textInput");
+    const voiceSelect = document.getElementById("voiceSelect");
+    const generateButton = document.getElementById("generateButton");
+    const downloadButton = document.getElementById("downloadButton");
+    const statusText = document.getElementById("status");
+    const audioPlayer = document.getElementById("audioPlayer");
+
+    generateButton.addEventListener("click", generateVoice);
+
+    async function generateVoice() {
+      const text = textInput.value.trim();
+      const voiceName = voiceSelect.value;
+
+      if (!text) {
+        statusText.textContent = "Teks narasi belum diisi.";
+        return;
+      }
+
+      generateButton.disabled = true;
+      generateButton.textContent = "Sedang membuat audio...";
+      statusText.textContent = "Menghubungi Gemini TTS...";
+      audioPlayer.style.display = "none";
+      downloadButton.style.display = "none";
+
+      try {
+        const response = await fetch(BACKEND_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            text: text,
+            voiceName: voiceName
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.error || "Gagal membuat audio."
+          );
+        }
+
+        const wavBlob = base64ToWavBlob(
+          result.audioBase64,
+          24000,
+          1,
+          16
+        );
+
+        const audioUrl = URL.createObjectURL(wavBlob);
+
+        audioPlayer.src = audioUrl;
+        audioPlayer.style.display = "block";
+
+        downloadButton.href = audioUrl;
+        downloadButton.style.display = "inline-block";
+
+        statusText.textContent = "Audio berhasil dibuat.";
+
+      } catch (error) {
+        statusText.textContent =
+          "Terjadi kesalahan: " + error.message;
+      } finally {
+        generateButton.disabled = false;
+        generateButton.textContent = "Generate Voice";
+      }
+    }
+
+    function base64ToWavBlob(
+      base64,
+      sampleRate,
+      numChannels,
+      bitsPerSample
+    ) {
+      const binaryString = atob(base64);
+      const pcmData = new Uint8Array(binaryString.length);
+
+      for (let i = 0; i < binaryString.length; i++) {
+        pcmData[i] = binaryString.charCodeAt(i);
+      }
+
+      const wavBuffer = createWavBuffer(
+        pcmData,
+        sampleRate,
+        numChannels,
+        bitsPerSample
+      );
+
+      return new Blob([wavBuffer], {
+        type: "audio/wav"
+      });
+    }
+
+    function createWavBuffer(
+      pcmData,
+      sampleRate,
+      numChannels,
+      bitsPerSample
+    ) {
+      const bytesPerSample = bitsPerSample / 8;
+      const blockAlign = numChannels * bytesPerSample;
+      const byteRate = sampleRate * blockAlign;
+
+      const buffer = new ArrayBuffer(
+        44 + pcmData.length
+      );
+
+      const view = new DataView(buffer);
+
+      writeText(view, 0, "RIFF");
+      view.setUint32(4, 36 + pcmData.length, true);
+      writeText(view, 8, "WAVE");
+      writeText(view, 12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitsPerSample, true);
+      writeText(view, 36, "data");
+      view.setUint32(40, pcmData.length, true);
+
+      const output = new Uint8Array(buffer);
+      output.set(pcmData, 44);
+
+      return buffer;
+    }
+
+    function writeText(view, offset, text) {
+      for (let i = 0; i < text.length; i++) {
+        view.setUint8(
+          offset + i,
+          text.charCodeAt(i)
+        );
+      }
+    }
+  </script>
+</body>
+</html>
