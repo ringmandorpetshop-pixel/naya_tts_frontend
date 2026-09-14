@@ -56,15 +56,11 @@ const characterCount =
 const fileNameInput =
   document.getElementById("fileNameInput");
 
-const installButton =
-  document.getElementById("installButton");
-
 // ========================================
 // STATE APLIKASI
 // ========================================
 
 let currentAudioUrl = null;
-let deferredInstallPrompt = null;
 
 // ========================================
 // EVENT LISTENER
@@ -82,15 +78,6 @@ if (generateButton) {
     "click",
     generateVoice
   );
-}
-
-if (installButton) {
-  installButton.addEventListener(
-    "click",
-    installApplication
-  );
-
-  installButton.hidden = true;
 }
 
 updateCharacterCount();
@@ -432,67 +419,6 @@ function createFileName() {
 
   return fileName;
 }
-
-// ========================================
-// PWA INSTALL
-// ========================================
-
-window.addEventListener(
-  "beforeinstallprompt",
-  (event) => {
-    event.preventDefault();
-
-    deferredInstallPrompt =
-      event;
-
-    if (installButton) {
-      installButton.hidden = false;
-    }
-  }
-);
-
-async function installApplication() {
-  if (!deferredInstallPrompt) {
-    showStatus(
-      "Gunakan menu browser untuk memasang AnaStudio ke layar utama."
-    );
-
-    return;
-  }
-
-  deferredInstallPrompt.prompt();
-
-  const result =
-    await deferredInstallPrompt.userChoice;
-
-  console.log(
-    "Hasil pemasangan:",
-    result.outcome
-  );
-
-  deferredInstallPrompt =
-    null;
-
-  if (installButton) {
-    installButton.hidden = true;
-  }
-}
-
-window.addEventListener(
-  "appinstalled",
-  () => {
-    deferredInstallPrompt =
-      null;
-
-    if (installButton) {
-      installButton.hidden = true;
-    }
-
-    console.log(
-      "AnaStudio berhasil dipasang."
-    );
-  }
-);
 
 // ========================================
 // SERVICE WORKER
