@@ -32,6 +32,9 @@ const voiceSelect =
 const speedSelect =
   document.getElementById("speedSelect");
 
+const characterSelect =
+  document.getElementById("characterSelect");
+
 const modelSelect =
   document.getElementById("modelSelect");
 
@@ -119,6 +122,9 @@ async function generateVoice() {
   const speed =
     speedSelect.value;
 
+  const character =
+    characterSelect.value;
+
   const modelName =
     modelSelect.value;
 
@@ -174,6 +180,8 @@ async function generateVoice() {
           voiceName: voiceName,
 
           speed: speed,
+
+          character: character,
 
           modelName: modelName
         })
