@@ -421,6 +421,19 @@ function createFileName() {
 }
 
 // ========================================
+// SPLASH SCREEN
+// ========================================
+
+window.addEventListener("load", () => {
+  const splashScreen = document.getElementById("splash-screen");
+  if (splashScreen) {
+    setTimeout(() => {
+      splashScreen.classList.add("fade-out");
+    }, 6000); // 6 detik
+  }
+});
+
+// ========================================
 // SERVICE WORKER
 // ========================================
 
